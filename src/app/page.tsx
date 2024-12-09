@@ -1,69 +1,66 @@
-'use client'; // Ensure this is a client-side component
+'use client';
+
+import dynamic from 'next/dynamic';
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
-import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fix missing marker icons
-delete (L.Icon.Default.prototype as unknown as { _getIconUrl: any })._getIconUrl;
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-});
-
 const Home = () => {
+  const [leaflet, setLeaflet] = useState<any>(null);
+
+  useEffect(() => {
+    // Dynamically import Leaflet for client-side rendering
+    import("leaflet").then((L) => {
+      setLeaflet(L.default);
+
+      // Fix missing marker icons
+      delete (L.default.Icon.Default.prototype as unknown as { _getIconUrl: any })._getIconUrl;
+      L.default.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+      });
+
+      // Initialize the map
+      const map = L.default.map("map").setView([40.7128, -74.006], 12);
+
+      // Add OpenStreetMap tiles
+      L.default.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors',
+      }).addTo(map);
+
+      // Add markers for multiple locations
+      const locations = [
+        { latitude: 40.7128, longitude: -74.006, label: "New York" },
+        { latitude: 40.7306, longitude: -73.9352, label: "Brooklyn" },
+        { latitude: 40.758, longitude: -73.9855, label: "Times Square" },
+      ];
+
+      locations.forEach(({ latitude, longitude, label }) => {
+        L.default.marker([latitude, longitude])
+          .addTo(map)
+          .bindPopup(label);
+      });
+    });
+  }, []);
+
+  // State for active buttons
   const [activeType, setActiveType] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
-    setIsClient(true); // Ensures the code runs only on the client
-  }, []);
+  // Handlers for toggling active states
+  const toggleType = (filter: string) => {
+    setActiveType(prev => (prev === filter ? null : filter));
+  };
 
-  useEffect(() => {
-    if (!isClient) return; // Guard for SSR
-    const map = L.map("map").setView([40.7128, -74.006], 12);
+  const toggleCategory = (filter: string) => {
+    setActiveCategory(prev => (prev === filter ? null : filter));
+  };
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors',
-    }).addTo(map);
-
-    const allLocations = [
-      { latitude: 40.7128, longitude: -74.006, label: "New York", type: "Business", category: "Retail" },
-      { latitude: 40.7306, longitude: -73.9352, label: "Brooklyn", type: "Retail", category: "Food" },
-      { latitude: 40.758, longitude: -73.9855, label: "Times Square", type: "Restaurants", category: "Food" },
-      { latitude: 40.7309, longitude: -73.9977, label: "Soho", type: "Business", category: "Health" },
-      { latitude: 40.749, longitude: -73.9877, label: "Madison Square", type: "Restaurants", category: "Service" }
-    ];
-
-    const filteredLocations = allLocations.filter(location => {
-      return (
-        (activeType ? location.type === activeType : true) &&
-        (activeCategory ? location.category === activeCategory : true) &&
-        (activeFilter ? location.label.includes(activeFilter) : true)
-      );
-    });
-
-    filteredLocations.forEach(({ latitude, longitude, label }) => {
-      L.marker([latitude, longitude])
-        .addTo(map)
-        .bindPopup(label);
-    });
-
-    return () => {
-      map.remove();
-    };
-  }, [isClient, activeType, activeCategory, activeFilter]);
-
-  const toggleType = (filter: string) => setActiveType(prev => (prev === filter ? null : filter));
-  const toggleCategory = (filter: string) => setActiveCategory(prev => (prev === filter ? null : filter));
-  const toggleFilter = (filter: string) => setActiveFilter(prev => (prev === filter ? null : filter));
-
-  if (!isClient) return null; // Prevent rendering on the server
+  const toggleFilter = (filter: string) => {
+    setActiveFilter(prev => (prev === filter ? null : filter));
+  };
 
   return (
     <div className="bg-light-background text-light-text dark:bg-dark-background dark:text-dark-text p-16 px-36">
