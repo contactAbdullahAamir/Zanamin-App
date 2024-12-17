@@ -45,6 +45,9 @@ export const Navbar = () => {
           <Link href="/contact" className="hover:text-light-primary dark:hover:text-dark-primary">
             Contact
           </Link>
+          <Link href="/distanceMatrixApi" className="hover:text-light-primary dark:hover:text-dark-primary">
+            Distance Matrix API
+          </Link>
         </div>
       </div>
     </nav>

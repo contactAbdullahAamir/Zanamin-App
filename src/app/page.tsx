@@ -48,7 +48,7 @@ const Home = () => {
   const fetchZmanimData = async (geoId: string) => {
     try {
       const response = await fetch(
-        `https://www.hebcal.com/zmanim?cfg=json&geonameid=${geoId}&date=${zanaminDate}`
+        `https://www.hebcal.com/zmanim?cfg=json&geonameid=5100280&date=${zanaminDate}`
       );
       const data = await response.json();
       setZmanimData(data);
