@@ -38,16 +38,6 @@ export const Navbar = () => {
             <Link href="/shul" className="hover:text-light-primary dark:hover:text-dark-primary">
             Shul
           </Link>
-          <Link href="/about" className="hover:text-light-primary dark:hover:text-dark-primary">
-            About
-          </Link>
-          
-          <Link href="/contact" className="hover:text-light-primary dark:hover:text-dark-primary">
-            Contact
-          </Link>
-          <Link href="/distanceMatrixApi" className="hover:text-light-primary dark:hover:text-dark-primary">
-            Distance Matrix API
-          </Link>
         </div>
       </div>
     </nav>
