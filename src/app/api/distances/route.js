@@ -53,9 +53,7 @@ export async function GET(req) {
       // Build the API URL
       const apiUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(source)}&destinations=${destinationsString}&key=${encodeURIComponent(apiKey)}`;
 
-      // Log the URL to debug URL length
-      console.log(`API URL: ${apiUrl.substring(0, 100)}... (length: ${apiUrl.length})`);
-
+      
       try {
         // Delay to avoid hitting rate limits
         await delay(200); // 200 ms delay before each request

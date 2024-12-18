@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 
 interface DataItem {
   fields?: {
@@ -23,18 +24,21 @@ interface DistanceMatrixResponse {
 }
 
 const Dashboard: React.FC = () => {
-  const [data, setData] = useState<DataItem[]>([]); 
+  const [data, setData] = useState<DataItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [source, setSource] = useState<string>('');  
-  const [distances, setDistances] = useState<{ destination: string; distance: string; status: string }[]>([]);  // State to store distances
+  const [source, setSource] = useState<string>('');
+  const [distances, setDistances] = useState<{ destination: string; distance: string; status: string }[]>([]);
+  const [locations, setLocations] = useState<{ lat: number; lng: number }[]>([]);
 
+  const [addresses, setAddresses] = useState<string[]>([]); // Moved to state to avoid re-computation
+  
+  // Fetch data and generate addresses when component mounts
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch('/api/proxy');
-        if (!response.ok) {
-          throw new Error('Failed to fetch data');
-        }
+        if (!response.ok) throw new Error('Failed to fetch data');
+        
         const result = await response.json();
         setData(result.records || []);
       } catch (err: any) {
@@ -45,17 +49,20 @@ const Dashboard: React.FC = () => {
     fetchData();
   }, []);
 
-  const addresses = Array.isArray(data)
-    ? data.map((item) => {
+  useEffect(() => {
+    if (data.length > 0) {
+      const formattedAddresses = data.map((item) => {
         const address = item.fields?.Address || '';
         const address2 = item.fields?.Address_2nd_Line || '';
         const city = item.fields?.City || '';
         return `${address} ${address2}, ${city}`.trim();
-      }).filter(Boolean)
-    : [];
+      }).filter(Boolean);
+      setAddresses(formattedAddresses);
+    }
+  }, [data]);
 
   const handleSourceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSource(e.target.value); 
+    setSource(e.target.value);
   };
 
   const findDistances = async () => {
@@ -65,61 +72,48 @@ const Dashboard: React.FC = () => {
     }
 
     try {
-      const destinations = addresses.join('|'); // Use pipe '|' to separate destinations for the API request
-      console.log('Source:', source);
-      console.log('Destinations:', destinations);
+      const destinations = addresses.join('|');
+      const response = await fetch(`/api/distances?source=${encodeURIComponent(source)}&destinations=${encodeURIComponent(destinations)}`);
 
-      const response = await fetch(`/api/distances?source=${encodeURIComponent(source)}&destinations=${encodeURIComponent(destinations)}`, {
-        method: 'GET', // Ensure GET method
-      });
-
-      if (!response.ok) {
-        throw new Error('Error fetching data from the distance API');
-      }
+      if (!response.ok) throw new Error('Error fetching data from the distance API');
 
       const data: DistanceMatrixResponse = await response.json();
-      console.log('API Response:', data); // Log the response
+      if (!data.rows || data.rows.length === 0) throw new Error('No distance data available.');
 
-      if (data.rows && data.rows.length > 0) {
-        const distancesArray = data.rows[0].elements;
+      const distancesArray = data.rows[0].elements.map((element, index) => ({
+        destination: data.destination_addresses[index],
+        distance: element.distance?.text || 'N/A',
+        status: element.status,
+        value: element.distance?.value || Infinity
+      }));
 
-        // Check if distances array is valid and contains elements
-        if (!distancesArray || distancesArray.length === 0) {
-          setError('No distances found in the response.');
-          return;
-        }
+      const sortedDistances = distancesArray.sort((a, b) => a.value - b.value).slice(0, 4);
+      setDistances(sortedDistances);
 
-        // Create an array with distance, status, and destination
-        const distancesOnly = distancesArray
-          .map((current, index) => {
-            const distanceValue = current.distance?.text;
-            const status = current.status;
-            const destination = data.destination_addresses[index];
+      const sourceCoords = await getCoordinates(source);
+      const destinationCoords = await Promise.all(addresses.map((address) => getCoordinates(address)));
 
-            // Ensure we only return valid distance values
-            if (distanceValue && status) {
-              return { destination, distance: distanceValue, status, value: current.distance?.value }; // Add the numeric value for sorting
-            }
-            return null; // Return null if no valid distance found
-          })
-          .filter((item) => item !== null) as { destination: string; distance: string; status: string; value: number }[]; // Filter out null items
-
-        // Sort distances by the numeric value
-        const sortedDistances = distancesOnly.sort((a, b) => a.value - b.value);
-
-        // Get the top 4 nearest destinations
-        const top4Distances = sortedDistances.slice(0, 4);
-
-        console.log('Top 4 Distances:', top4Distances); // Log the top 4 nearest distances
-
-        // Set the distances to the state
-        setDistances(top4Distances);
-      } else {
-        setError('Error calculating distances. No rows found.');
-      }
+      setLocations([sourceCoords, ...destinationCoords]);
     } catch (err: any) {
       setError('Error fetching Distance Matrix data: ' + err.message);
-      console.error('Error fetching Distance Matrix data:', err); // Log the error
+    }
+  };
+
+  const getCoordinates = async (address: string) => {
+    try {
+      const response = await fetch(`/api/maps?address=${encodeURIComponent(address)}`);
+      if (!response.ok) throw new Error(`Error: ${response.status}`);
+      
+      const data = await response.json();
+      if (data.results && data.results[0]) {
+        const { lat, lng } = data.results[0].geometry.location;
+        return { lat, lng };
+      } else {
+        throw new Error('No coordinates found for address');
+      }
+    } catch (err) {
+      console.error('Error getting coordinates for:', address, err);
+      return { lat: 0, lng: 0 }; // Return a default location in case of error
     }
   };
 
@@ -127,7 +121,7 @@ const Dashboard: React.FC = () => {
     <div>
       <h1>Dashboard</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
-      
+
       <input
         type="text"
         placeholder="Enter your source location"
@@ -160,6 +154,20 @@ const Dashboard: React.FC = () => {
         </ul>
       ) : (
         <p>No addresses found</p>
+      )}
+
+      {locations.length > 0 && (
+        <LoadScript googleMapsApiKey="AIzaSyAyVpJDHH7EU0LnE9leoqYFMbjTdaQgHjs">
+          <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '400px' }}
+            center={locations[0]} // Center the map on the source location
+            zoom={10}
+          >
+            {locations.map((location, index) => (
+              <Marker key={index} position={location} />
+            ))}
+          </GoogleMap>
+        </LoadScript>
       )}
     </div>
   );
