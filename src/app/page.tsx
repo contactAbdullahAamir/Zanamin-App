@@ -12,6 +12,7 @@ const Home = () => {
   const [error, setError] = useState<string | null>(null);
   const [zmanimData, setZmanimData] = useState<any>(null); // To store Zmanim API response
   const [zanaminDate, setZanaminDate] = useState("");
+  
   let invisibleSpace = "\u200B";
 
   // Helper function to convert time to HH:MM
@@ -48,7 +49,7 @@ const Home = () => {
   const fetchZmanimData = async (geoId: string) => {
     try {
       const response = await fetch(
-        `https://www.hebcal.com/zmanim?cfg=json&geonameid=${geoId}&date=${zanaminDate}`
+        `https://www.hebcal.com/zmanim?cfg=json&geonameid=5100280&date=${zanaminDate}`
       );
       const data = await response.json();
       setZmanimData(data);
@@ -82,7 +83,7 @@ const Home = () => {
       L.default
         .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
-          attribution: "as OpenStreetMap contributors",
+          attribution: "© OpenStreetMap contributors",
         })
         .addTo(map);
 
@@ -99,6 +100,34 @@ const Home = () => {
     });
   }, []);
 
+  useEffect(() => {
+      const fetchRestaurants = async () => {
+        setIsLoading(true); // Start loading
+        try {
+          const response = await fetch(
+            `/api/proxy`,
+            { method: 'GET' }
+          );
+          const data = await response.json();
+          
+          // Check if the data contains a `records` field and it's an array
+          if (data && Array.isArray(data.records)) {
+            setRestaurants(data.records); // Set the records array to state
+            setFilteredRestaurants(data.records); // Set the records as the initial filtered list
+          } else {
+            console.error("Fetched data is not in the expected format:", data);
+          }
+        } catch (error) {
+          console.error("Error fetching restaurants:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+  
+      fetchRestaurants();
+    }, []);
+  
+
   // State for each type, category, filter, and tafilah
   type FilterOption =
     | "Adus Hamisrach"
@@ -107,6 +136,9 @@ const Home = () => {
     | "Bakeries"
     | "Catering"
     | "Markets";
+  type resturant_pricerange="Affordable" | "Mid-Range" | "Premium";
+  type cuisine_type="Milchig" | "Fleishig";
+  type service_options="Dine-in" | "Takeout";
   type CategoryType = "Retail" | "Food" | "Health" | "Service" | "Home";
   type TafilahType = "Shacharit" | "Mincha" | "Ma'ariv" | "Yom Tov";
   type TypeOption = "Minyam" | "Business" | "Restaurants";
@@ -115,12 +147,21 @@ const Home = () => {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [activeTafilah, setActiveTafilah] = useState<string | null>(null);
 
+   const [activePriceRange, setActivePriceRange] = useState<string[]>([]);
+    const [activeCuisineType, setActiveCuisineType] = useState<string[]>([]);
+    const [activeServiceOptions, setActiveServiceOptions] = useState<string[]>([]);
+    const [restaurants, setRestaurants] = useState<any[]>([]); // Ensure this is an array
+    const [filteredRestaurants, setFilteredRestaurants] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+
   // Toggle function for Type
   const toggleType = (type: string) => {
-    setActiveType(type); // Set the selected type
-    setActiveCategory(null); // Reset the category when type is changed
-    setActiveFilter(null); // Reset filters when type is changed
-    setActiveTafilah(null); // Reset tafilah when type is changed
+    setActiveType(type);
+    setActiveCategory(null); 
+    setActiveFilter(null);
+    setActiveTafilah(null);
+    
   };
 
   // Toggle function for Category (only for Business type)
@@ -136,6 +177,71 @@ const Home = () => {
   const toggleTafilah = (tafilah: string) => {
     setActiveTafilah(tafilah);
   };
+
+  // Toggle function for PriceRange (only for restaurants)
+  const togglePriceRange = (range: string) => {
+    setActivePriceRange((prev) =>
+      prev.includes(range) ? prev.filter((r) => r !== range) : [...prev, range]
+    );
+  };
+
+  // Toggle Cuisine Type Filter
+  const toggleCuisineType = (cuisine: string) => {
+    setActiveCuisineType((prev) =>
+      prev.includes(cuisine) ? prev.filter((c) => c !== cuisine) : [...prev, cuisine]
+    );
+  };
+
+  // Toggle Service Options Filter
+  const toggleServiceOptions = (option: string) => {
+    setActiveServiceOptions((prev) =>
+      prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]
+    );
+  };
+
+
+   useEffect(() => {
+      const applyFilters = () => {
+        if (isLoading) return; // Don't filter while data is loading
+        const filtered = restaurants.filter((restaurant) => {
+          
+          // **1. Price Range Filter**: Match `Price_Point` or `Price_Point_Option_2`
+          const priceMatch = activePriceRange.length === 0 
+            || activePriceRange.some((range) => 
+              restaurant.fields.Price_Point.includes(range) || 
+              restaurant.fields.Price_Point_Option_2.includes(range)
+            );
+  
+          // **2. Cuisine Type Filter**: Match `Dairy_Meat`
+          const cuisineMatch = activeCuisineType.length === 0 
+            || activeCuisineType.includes(restaurant.fields.Dairy_Meat);
+  
+  
+            
+          // **3. Service Options Filter**: Check if `Type` array includes the selected options
+          const serviceMatch = activeServiceOptions.length === 0 
+            || activeServiceOptions.some((option) => 
+              restaurant.fields.Type.includes(option)
+            );
+  
+          // Return true if the restaurant matches all active filters
+          return priceMatch && cuisineMatch && serviceMatch;
+        });
+  
+        setFilteredRestaurants(filtered);
+      };
+  
+      applyFilters();
+    }, [activePriceRange, activeCuisineType, activeServiceOptions, restaurants, isLoading]);
+  
+    // Render a loading state while waiting for data to be fetched
+    if (isLoading) {
+      return <div>Loading restaurants...</div>;
+    }
+
+  const restaurantsToDisplay = Array.isArray(filteredRestaurants) ? filteredRestaurants : [];
+
+
   return (
     <div className="bg-light-background text-light-text dark:bg-dark-background dark:text-dark-text p-16 px-36">
       <div className="flex flex-col md:flex-row justify-center items-start md:space-x-8">
@@ -298,10 +404,80 @@ const Home = () => {
                     ))}
                   </div>
                 )}
+
+
+                {activeType === "Restaurants" && (
+                  <div className="mt-4">
+                  <label className="block text-lg font-semibold mb-2">Price Range:</label>
+                  {["$", "$$", "$$$"].map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => togglePriceRange(filter)}
+                      className={`px-4 py-2 rounded-md text-sm mr-2 ${activePriceRange.includes(filter) ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+          
+                )}
+
+
+                 {activeType === "Restaurants" && (
+                   <div className="mt-4">
+                   <label className="block text-lg font-semibold mb-2">Cuisine Type:</label>
+                   {["Dairy", "Meat"].map((filter) => (
+                     <button
+                       key={filter}
+                       onClick={() => toggleCuisineType(filter)}
+                       className={`px-4 py-2 rounded-md text-sm mr-2 ${activeCuisineType.includes(filter) ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+                     >
+                       {filter}
+                     </button>
+                   ))}
+                 </div>
+                )}
+
+
+              {activeType === "Restaurants" && (
+                  <div className="mt-4">
+                  <label className="block text-lg font-semibold mb-2">Service Options:</label>
+                  {["Dine in", "Takeout"].map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => toggleServiceOptions(filter)}
+                      className={`px-4 py-2 rounded-md text-sm mr-2 ${activeServiceOptions.includes(filter) ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+                )}
               </>
             )}
           </div>
         </div>
+      </div>
+
+     
+
+      {/* Display Filtered Restaurants */}
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-4">Filtered Restaurants</h2>
+        {restaurantsToDisplay.length === 0 ? (
+          <p>No restaurants match your filters.</p>
+        ) : (
+          restaurantsToDisplay.map((restaurant) => (
+            <div key={restaurant.id} className="p-4 border-b">
+              <h3 className="text-xl font-semibold">{restaurant.fields.Name}</h3>
+              <p>{restaurant.fields.Address}</p>
+              <p><strong>Price:</strong> {restaurant.fields.Price_Point}</p>
+              <p><strong>Cuisine:</strong> {restaurant.fields.Dairy_Meat}</p>
+              <p><strong>Services:</strong> {restaurant.fields.Type[1]}</p>
+            </div>
+          ))
+        )}
+        
       </div>
       {zmanimData && (
         <div className="mt-8">
@@ -417,6 +593,7 @@ const Home = () => {
         </div>
       )}
     </div>
+      
   );
 };
 
