@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import { useJsApiLoader } from "@react-google-maps/api";
 import Image from "next/image";
-require('dotenv').config();
+require("dotenv").config();
 
 interface DataItem {
   fields?: {
@@ -30,7 +30,7 @@ interface DistanceMatrixResponse {
 const Home = () => {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: "AIzaSyAyVpJDHH7EU0LnE9leoqYFMbjTdaQgHjs",
-  })
+  });
   const [cityName, setCityName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [zmanimData, setZmanimData] = useState<any>(null);
@@ -106,7 +106,6 @@ const Home = () => {
   ]);
 
   // Generate addresses from data
-  
 
   useEffect(() => {
     if (data.length > 0) {
@@ -180,7 +179,6 @@ const Home = () => {
     fetchRestaurants();
   }, []);
 
-  
   const restaurantsToDisplay = Array.isArray(filteredRestaurants)
     ? filteredRestaurants
     : [];
@@ -310,13 +308,12 @@ const Home = () => {
       setDistances(sortedDistances);
 
       const sourceCoords = await getCoordinates(source);
-      const topDestinations = sortedDistances.map(d => d.destination); 
+      const topDestinations = sortedDistances.map((d) => d.destination);
       const destinationCoords = await Promise.all(
-        topDestinations.map(address => getCoordinates(address))
+        topDestinations.map((address) => getCoordinates(address))
       );
 
       setLocations([sourceCoords, ...destinationCoords]);
-      
     } catch (err: any) {
       setError("Error fetching Distance Matrix data: " + err.message);
     }
@@ -344,22 +341,27 @@ const Home = () => {
     }
   };
   interface MapComponentProps {
-    locations: { lat: number; lng: number }[]; 
+    locations: { lat: number; lng: number }[];
   }
 
-  if (isLoading || mapLoading ) {
+  if (isLoading || mapLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen flex-col">
-        <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full border-t-transparent border-blue-600" role="status">
+        <div
+          className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full border-t-transparent border-blue-600"
+          role="status"
+        >
           <span className="sr-only">Loading...</span>
         </div>
-        <p className="mt-4 text-xl text-gray-600">Data is loading, please wait...</p>
+        <p className="mt-4 text-xl text-gray-600">
+          Data is loading, please wait...
+        </p>
       </div>
     );
   }
-  
+
   return (
-    <div className="bg-light-background text-light-text dark:bg-dark-background dark:text-dark-text p-16 px-36">
+    <div className="bg-light-background text-light-text dark:bg-dark-background dark:text-dark-text p-16 px-36 flex-grow">
       <div className="flex flex-col md:flex-row justify-center items-start md:space-x-8">
         {/* Map Section */}
         <div>
@@ -422,15 +424,17 @@ const Home = () => {
               onChange={handleSourceChange}
               className="p-2 border border-gray-300 rounded-md w-full"
             />
-           <div className="flex items-center space-x-4">
-  <button
-    onClick={findDistances}
-    className="bg-blue-500 text-white px-4 py-2 rounded-md mt-4"
-  >
-    Search
-  </button>
-  <span className="mt-4 text-gray-700">Click search to see Zmanim Times</span>
-</div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={findDistances}
+                className="bg-blue-500 text-white px-4 py-2 rounded-md mt-4"
+              >
+                Search
+              </button>
+              <span className="mt-4 text-gray-700">
+                Click search to see Zmanim Times
+              </span>
+            </div>
           </div>
           <div>
             {/* Type Column */}
@@ -612,7 +616,7 @@ const Home = () => {
                 )}
               </>
             )}
-            
+
             {distances.length > 0 && (
               <div className="bg-white p-4 rounded-lg shadow-lg w-80 h-60 overflow-y-auto ml-auto">
                 <ul className="space-y-4">
@@ -642,184 +646,191 @@ const Home = () => {
         </div>
       </div>
 
-      
-      <div>
+      <div id="zanamin">
         <div>
-          <span className="text-[#53aae3] font-medium mb-4">DAILY ZMANIM</span>
-          <h1 className="text-2xl font-semibold mb-1">
-            {new Date(zanaminDate).toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </h1>
-          <b className="text-2xl font-semibold mb-1">י׳ חשון תשפ״ה</b>
-        </div>
-      </div>
-      <div className="flex justify-evenly items-center space-x-12 pt-6">
-        <div className="flex-1">
-          <div className="space-y-8">
-            <div className="items-center">
-              <Image
-                src="SVG/s_DAWN.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Dawn"
-              />
-              <h3 className="text-2xl">
-                {zmanimData ? formatTime(zmanimData.times.dawn) : "00:00"}
-              </h3>
-            </div>
-            <div className="item-center">
-              <Image
-                src="SVG/s_TALISTEFILIN.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Talis"
-              />
-              <h3 className="text-2xl">
-                {zmanimData
-                  ? formatTime(zmanimData.times.misheyakirMachmir)
-                  : "00:00"}
-              </h3>
-            </div>
-            <div className="item-center">
-              <Image
-                src="SVG/s_SUNRISE.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Sunrise"
-              />
-              <h3 className="text-2xl">
-                {zmanimData ? formatTime(zmanimData.times.sunrise) : "00:00"}
-              </h3>
-            </div>
-            <div className="item-center">
-              <Image
-                src="SVG/s_SHEMA MGA.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Shema"
-              />
-              <h3 className="text-2xl">
-                {zmanimData
-                  ? formatTime(zmanimData.times.sofZmanShmaMGA)
-                  : "00:00"}
-              </h3>
-            </div>
-            <div className="item-center">
-              <Image
-                src="SVG/s_SHEMA GRA.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Shema G"
-              />
-              <h3 className="text-2xl">
-                {zmanimData
-                  ? formatTime(zmanimData.times.sofZmanShma)
-                  : "00:00"}
-              </h3>
-            </div>
-            <div className="item-center">
-              <Image
-                src="SVG/s_SHACRIS GRA.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Shacris"
-              />
-              <h3 className="text-2xl">
-                {zmanimData
-                  ? formatTime(zmanimData.times.sofZmanTfilla)
-                  : "00:00"}
-              </h3>
-            </div>
+          <div>
+            <span className="text-[#53aae3] font-medium mb-4">
+              DAILY ZMANIM
+            </span>
+            <h1 className="text-2xl font-semibold mb-1">
+              {new Date(zanaminDate).toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </h1>
+            <b className="text-2xl font-semibold mb-1">י׳ חשון תשפ״ה</b>
           </div>
         </div>
+        <div className="flex justify-evenly items-center space-x-12 pt-6">
+          <div className="flex-1">
+            <div className="space-y-8">
+              <div className="items-center">
+                <Image
+                  src="SVG/s_DAWN.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Dawn"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData ? formatTime(zmanimData.times.dawn) : "00:00"}
+                </h3>
+              </div>
+              <div className="item-center">
+                <Image
+                  src="SVG/s_TALISTEFILIN.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Talis"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData
+                    ? formatTime(zmanimData.times.misheyakirMachmir)
+                    : "00:00"}
+                </h3>
+              </div>
+              <div className="item-center">
+                <Image
+                  src="SVG/s_SUNRISE.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Sunrise"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData ? formatTime(zmanimData.times.sunrise) : "00:00"}
+                </h3>
+              </div>
+              <div className="item-center">
+                <Image
+                  src="SVG/s_SHEMA MGA.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Shema"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData
+                    ? formatTime(zmanimData.times.sofZmanShmaMGA)
+                    : "00:00"}
+                </h3>
+              </div>
+              <div className="item-center">
+                <Image
+                  src="SVG/s_SHEMA GRA.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Shema G"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData
+                    ? formatTime(zmanimData.times.sofZmanShma)
+                    : "00:00"}
+                </h3>
+              </div>
+              <div className="item-center">
+                <Image
+                  src="SVG/s_SHACRIS GRA.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Shacris"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData
+                    ? formatTime(zmanimData.times.sofZmanTfilla)
+                    : "00:00"}
+                </h3>
+              </div>
+            </div>
+          </div>
 
-        <div className="flex-1">
-          <div className="space-y-8">
-            <div className="item-center">
-              <Image
-                src="SVG/s_MIDDAY.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Midday"
-              />
-              <h3 className="text-2xl">
-                {zmanimData ? formatTime(zmanimData.times.chatzot) : "00:00"}
-              </h3>
-            </div>
-            <div className="item-center">
-              <Image
-                src="SVG/s_EARLY MINCHA.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Early Mincha"
-              />
-              <h3 className="text-2xl">
-                {zmanimData
-                  ? formatTime(zmanimData.times.minchaGedola)
-                  : "00:00"}
-              </h3>
-            </div>
-            <div className="item-center">
-              <Image
-                src="SVG/s_PLAG HAMINCHA.svg"
-                width={250}
-                height={250}
-                className="zman-svg"
-                alt="Plag Mincha"
-              />
-              <h3 className="text-2xl">
-                {zmanimData
-                  ? formatTime(zmanimData.times.plagHaMincha)
-                  : "00:00"}
-              </h3>
-            </div>
-            <div className="item-center">
-              <Image
-                src="SVG/s_SUNSET.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Sunset"
-              />
-              <h3 className="text-2xl">
-                {zmanimData ? formatTime(zmanimData.times.sunset) : "00:00"}
-              </h3>
-            </div>
-            <div className="item-center">
-              <Image
-                src="SVG/s_NIGHT 3 STARS.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Night 3 Stars"
-              />
-              <h3 className="text-2xl">
-                {zmanimData ? formatTime(zmanimData.times.tzeit85deg) : "00:00"}
-              </h3>
-            </div>
-            <div className="item-center">
-              <Image
-                src="SVG/s_NIGHT 72.svg"
-                width={300}
-                height={300}
-                className="zman-svg"
-                alt="Night 7"
-              />
-              <h3 className="text-2xl">
-                {zmanimData ? formatTime(zmanimData.times.tzeit72min) : "00:00"}
-              </h3>
+          <div className="flex-1">
+            <div className="space-y-8">
+              <div className="item-center">
+                <Image
+                  src="SVG/s_MIDDAY.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Midday"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData ? formatTime(zmanimData.times.chatzot) : "00:00"}
+                </h3>
+              </div>
+              <div className="item-center">
+                <Image
+                  src="SVG/s_EARLY MINCHA.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Early Mincha"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData
+                    ? formatTime(zmanimData.times.minchaGedola)
+                    : "00:00"}
+                </h3>
+              </div>
+              <div className="item-center">
+                <Image
+                  src="SVG/s_PLAG HAMINCHA.svg"
+                  width={250}
+                  height={250}
+                  className="zman-svg"
+                  alt="Plag Mincha"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData
+                    ? formatTime(zmanimData.times.plagHaMincha)
+                    : "00:00"}
+                </h3>
+              </div>
+              <div className="item-center">
+                <Image
+                  src="SVG/s_SUNSET.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Sunset"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData ? formatTime(zmanimData.times.sunset) : "00:00"}
+                </h3>
+              </div>
+              <div className="item-center">
+                <Image
+                  src="SVG/s_NIGHT 3 STARS.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Night 3 Stars"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData
+                    ? formatTime(zmanimData.times.tzeit85deg)
+                    : "00:00"}
+                </h3>
+              </div>
+              <div className="item-center">
+                <Image
+                  src="SVG/s_NIGHT 72.svg"
+                  width={300}
+                  height={300}
+                  className="zman-svg"
+                  alt="Night 7"
+                />
+                <h3 className="text-2xl">
+                  {zmanimData
+                    ? formatTime(zmanimData.times.tzeit72min)
+                    : "00:00"}
+                </h3>
+              </div>
             </div>
           </div>
         </div>

@@ -1,9 +1,16 @@
 'use client';
-import { useState } from "react";
-import Link from "next/link";
+import { useState } from 'react';
+import Link from 'next/link';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleScrollToZanamin = () => {
+    const zanaminSection = document.getElementById('zanamin');
+    if (zanaminSection) {
+      zanaminSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <nav className="bg-light-background dark:bg-dark-background text-light-text dark:text-dark-text sm:px-64 px-6 py-4 shadow-md relative">
@@ -22,21 +29,24 @@ export const Navbar = () => {
             className="text-light-text dark:text-dark-text focus:outline-none"
             aria-label="Toggle Menu"
           >
-            {isOpen ? "✖" : "☰"}
+            {isOpen ? '✖' : '☰'}
           </button>
         </div>
 
         {/* Links */}
         <div
           className={`${
-            isOpen ? "flex" : "hidden"
-          } flex-col  md:flex md:flex-row absolute md:relative top-16 sm:top-0 left-0 w-full md:w-auto bg-light-background dark:bg-dark-background transition-all duration-300 ease-in-out z-10 md:translate-y-0 md:opacity-100 space-y-4 md:space-y-0 md:space-x-6 px-6 md:px-0 py-4 md:py-0`}
+            isOpen ? 'flex' : 'hidden'
+          } flex-col md:flex md:flex-row absolute md:relative top-16 sm:top-0 left-0 w-full md:w-auto bg-light-background dark:bg-dark-background transition-all duration-300 ease-in-out z-10 md:translate-y-0 md:opacity-100 space-y-4 md:space-y-0 md:space-x-6 px-6 md:px-0 py-4 md:py-0`}
         >
-            <Link href="/zamamin" className="hover:text-light-primary dark:hover:text-dark-primary">
-            Zamanim
-          </Link>
-            <Link href="/shul" className="hover:text-light-primary dark:hover:text-dark-primary">
-            Shul
+          <button
+            onClick={handleScrollToZanamin}
+            className="hover:text-light-primary dark:hover:text-dark-primary"
+          >
+            Zmanim
+          </button>
+          <Link href="/" className="hover:text-light-primary dark:hover:text-dark-primary">
+            About
           </Link>
         </div>
       </div>
