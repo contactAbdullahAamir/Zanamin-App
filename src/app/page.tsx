@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import { useJsApiLoader } from "@react-google-maps/api";
 import Image from "next/image";
+require('dotenv').config();
 
 interface DataItem {
   fields?: {
@@ -29,7 +30,7 @@ interface DistanceMatrixResponse {
 const Home = () => {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: "AIzaSyAyVpJDHH7EU0LnE9leoqYFMbjTdaQgHjs",
-  });
+  })
   const [cityName, setCityName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [zmanimData, setZmanimData] = useState<any>(null);
@@ -58,6 +59,9 @@ const Home = () => {
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [filteredRestaurants, setFilteredRestaurants] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [zmanimLoading, setZmanimLoading] = useState<boolean>(true);
+  const [locationsLoading, setLocationsLoading] = useState<boolean>(true);
+  const [mapLoading, setMapLoading] = useState<boolean>(true);
 
   let invisibleSpace = "\u200B";
 
@@ -102,19 +106,7 @@ const Home = () => {
   ]);
 
   // Generate addresses from data
-  useEffect(() => {
-    if (data.length > 0) {
-      const formattedAddresses = data
-        .map((item) => {
-          const address = item.fields?.Address || "";
-          const address2 = item.fields?.Address_2nd_Line || "";
-          const city = item.fields?.City || "";
-          return `${address} ${address2}, ${city}`.trim();
-        })
-        .filter(Boolean);
-      setAddresses(formattedAddresses);
-    }
-  }, [data]);
+  
 
   useEffect(() => {
     if (data.length > 0) {
@@ -147,6 +139,23 @@ const Home = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const updateLocations = async () => {
+      if (filteredRestaurants.length > 0) {
+        const coords = await Promise.all(
+          filteredRestaurants.map(async (restaurant) => {
+            const address = `${restaurant.fields.Address} ${restaurant.fields.Address_2nd_Line}, ${restaurant.fields.City}`;
+            return await getCoordinates(address);
+          })
+        );
+        setLocations(coords);
+        setLocationsLoading(false);
+      }
+    };
+
+    updateLocations();
+  }, [filteredRestaurants]);
+
   // Fetch restaurants data on mount
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -171,75 +180,7 @@ const Home = () => {
     fetchRestaurants();
   }, []);
 
-  useEffect(() => {
-    const fetchRestaurants = async () => {
-      setIsLoading(true); // Start loading
-      try {
-        const response = await fetch(`/api/proxy`, { method: "GET" });
-        const data = await response.json();
-
-        // Check if the data contains a `records` field and it's an array
-        if (data && Array.isArray(data.records)) {
-          setRestaurants(data.records); // Set the records array to state
-          setFilteredRestaurants(data.records); // Set the records as the initial filtered list
-        } else {
-          console.error("Fetched data is not in the expected format:", data);
-        }
-      } catch (error) {
-        console.error("Error fetching restaurants:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRestaurants();
-  }, []);
-  useEffect(() => {
-    const applyFilters = () => {
-      if (isLoading) return; // Don't filter while data is loading
-      const filtered = restaurants.filter((restaurant) => {
-        // **1. Price Range Filter**: Match `Price_Point` or `Price_Point_Option_2`
-        const priceMatch =
-          activePriceRange.length === 0 ||
-          activePriceRange.some(
-            (range) =>
-              restaurant.fields.Price_Point.includes(range) ||
-              restaurant.fields.Price_Point_Option_2.includes(range)
-          );
-
-        // **2. Cuisine Type Filter**: Match `Dairy_Meat`
-        const cuisineMatch =
-          activeCuisineType.length === 0 ||
-          activeCuisineType.includes(restaurant.fields.Dairy_Meat);
-
-        // **3. Service Options Filter**: Check if `Type` array includes the selected options
-        const serviceMatch =
-          activeServiceOptions.length === 0 ||
-          activeServiceOptions.some((option) =>
-            restaurant.fields.Type.includes(option)
-          );
-
-        // Return true if the restaurant matches all active filters
-        return priceMatch && cuisineMatch && serviceMatch;
-      });
-
-      setFilteredRestaurants(filtered);
-    };
-
-    applyFilters();
-  }, [
-    activePriceRange,
-    activeCuisineType,
-    activeServiceOptions,
-    restaurants,
-    isLoading,
-  ]);
-
-  // Render a loading state while waiting for data to be fetched
-  if (isLoading) {
-    return <div>Loading restaurants...</div>;
-  }
-
+  
   const restaurantsToDisplay = Array.isArray(filteredRestaurants)
     ? filteredRestaurants
     : [];
@@ -259,6 +200,7 @@ const Home = () => {
       );
       const data = await response.json();
       setZmanimData(data);
+      setZmanimLoading(false);
       setError(null);
     } catch (error) {
       setError("Error fetching Zmanim data.");
@@ -368,11 +310,13 @@ const Home = () => {
       setDistances(sortedDistances);
 
       const sourceCoords = await getCoordinates(source);
+      const topDestinations = sortedDistances.map(d => d.destination); 
       const destinationCoords = await Promise.all(
-        addresses.map((address) => getCoordinates(address))
+        topDestinations.map(address => getCoordinates(address))
       );
 
       setLocations([sourceCoords, ...destinationCoords]);
+      
     } catch (err: any) {
       setError("Error fetching Distance Matrix data: " + err.message);
     }
@@ -388,19 +332,32 @@ const Home = () => {
       const data = await response.json();
       if (data.results && data.results[0]) {
         const { lat, lng } = data.results[0].geometry.location;
+        setMapLoading(false);
         return { lat, lng };
       } else {
         throw new Error("No coordinates found for address");
       }
     } catch (err) {
       console.error("Error getting coordinates for:", address, err);
+      setMapLoading(false);
       return { lat: 0, lng: 0 }; // Return a default location in case of error
     }
   };
   interface MapComponentProps {
-    locations: { lat: number; lng: number }[]; // Define the shape of location data
+    locations: { lat: number; lng: number }[]; 
   }
 
+  if (isLoading || mapLoading ) {
+    return (
+      <div className="flex justify-center items-center min-h-screen flex-col">
+        <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full border-t-transparent border-blue-600" role="status">
+          <span className="sr-only">Loading...</span>
+        </div>
+        <p className="mt-4 text-xl text-gray-600">Data is loading, please wait...</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="bg-light-background text-light-text dark:bg-dark-background dark:text-dark-text p-16 px-36">
       <div className="flex flex-col md:flex-row justify-center items-start md:space-x-8">
@@ -465,13 +422,15 @@ const Home = () => {
               onChange={handleSourceChange}
               className="p-2 border border-gray-300 rounded-md w-full"
             />
-            <button
-              onClick={findDistances}
-              className="bg-blue-500 text-white px-4 py-2 rounded-md mt-4"
-            >
-              Search
-            </button>
-            {error && <p className="mt-4 text-red-500">Error: {error}</p>}
+           <div className="flex items-center space-x-4">
+  <button
+    onClick={findDistances}
+    className="bg-blue-500 text-white px-4 py-2 rounded-md mt-4"
+  >
+    Search
+  </button>
+  <span className="mt-4 text-gray-700">Click search to see Zmanim Times</span>
+</div>
           </div>
           <div>
             {/* Type Column */}
@@ -591,14 +550,14 @@ const Home = () => {
 
                 {activeType === "Restaurants" && (
                   <div className="mt-4">
-                    <label className="block text-lg font-semibold mb-2">
+                    <label className="block text-sm font-semibold mb-1">
                       Price Range:
                     </label>
                     {["$", "$$", "$$$"].map((filter) => (
                       <button
                         key={filter}
                         onClick={() => togglePriceRange(filter)}
-                        className={`px-4 py-2 rounded-md text-sm mr-2 ${
+                        className={`px-4 py-1 rounded-md text-sm mr-2 ${
                           activePriceRange.includes(filter)
                             ? "bg-blue-500 text-white"
                             : "bg-gray-200"
@@ -612,7 +571,7 @@ const Home = () => {
 
                 {activeType === "Restaurants" && (
                   <div className="mt-4">
-                    <label className="block text-lg font-semibold mb-2">
+                    <label className="block text-sm font-semibold mb-1">
                       Cuisine Type:
                     </label>
                     {["Dairy", "Meat"].map((filter) => (
@@ -633,7 +592,7 @@ const Home = () => {
 
                 {activeType === "Restaurants" && (
                   <div className="mt-4">
-                    <label className="block text-lg font-semibold mb-2">
+                    <label className="block text-sm font-semibold mb-1">
                       Service Options:
                     </label>
                     {["Dine in", "Takeout"].map((filter) => (
@@ -653,6 +612,7 @@ const Home = () => {
                 )}
               </>
             )}
+            
             {distances.length > 0 && (
               <div className="bg-white p-4 rounded-lg shadow-lg w-80 h-60 overflow-y-auto ml-auto">
                 <ul className="space-y-4">
@@ -682,32 +642,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Display Filtered Restaurants
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">Filtered Restaurants</h2>
-        {restaurantsToDisplay.length === 0 ? (
-          <p>No restaurants match your filters.</p>
-        ) : (
-          restaurantsToDisplay.map((restaurant) => (
-            <div key={restaurant.id} className="p-4 border-b">
-              <h3 className="text-xl font-semibold">
-                {restaurant.fields.Name}
-              </h3>
-              <p>{restaurant.fields.Address}</p>
-              <p>
-                <strong>Price:</strong> {restaurant.fields.Price_Point}
-              </p>
-              <p>
-                <strong>Cuisine:</strong> {restaurant.fields.Dairy_Meat}
-              </p>
-              <p>
-                <strong>Services:</strong> {restaurant.fields.Type[1]}
-              </p>
-            </div>
-          ))
-        )}
-      </div> */}
-
+      
       <div>
         <div>
           <span className="text-[#53aae3] font-medium mb-4">DAILY ZMANIM</span>

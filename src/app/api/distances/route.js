@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+require('dotenv').config();
 
-// Utility function to delay requests to avoid hitting Google API rate limits
+
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -25,7 +26,7 @@ export async function GET(req) {
     console.log('Destination List:', destinationList);  // Debugging
 
     // Load the API key from environment variables (more secure)
-    const apiKey = "AIzaSyAyVpJDHH7EU0LnE9leoqYFMbjTdaQgHjs";
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+require('dotenv').config();
 
 export async function GET() {
   const API_URL = 'https://lakewoodluach.getgrist.com/api/docs/mfG1uWuVC9zwM1kapuvW1U/tables/Resturants/records';
-  const API_KEY = '75556160058f1b29607ff9421a798f89039dbc42'; // Replace with your actual API key
+  const API_KEY = "75556160058f1b29607ff9421a798f89039dbc42"; 
 
   try {
     const response = await fetch(API_URL, {

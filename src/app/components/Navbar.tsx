@@ -33,7 +33,7 @@ export const Navbar = () => {
           } flex-col  md:flex md:flex-row absolute md:relative top-16 sm:top-0 left-0 w-full md:w-auto bg-light-background dark:bg-dark-background transition-all duration-300 ease-in-out z-10 md:translate-y-0 md:opacity-100 space-y-4 md:space-y-0 md:space-x-6 px-6 md:px-0 py-4 md:py-0`}
         >
             <Link href="/zamamin" className="hover:text-light-primary dark:hover:text-dark-primary">
-            Zamamin
+            Zamanim
           </Link>
             <Link href="/shul" className="hover:text-light-primary dark:hover:text-dark-primary">
             Shul
